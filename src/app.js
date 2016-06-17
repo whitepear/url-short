@@ -32,20 +32,26 @@ app.get('/new/:url(*)?', function(req, res) {
 				var urlCollection = db.collection('urls');
 				if (err) {
 					console.log('Unable to connect to database', err);
+					db.close();
 				} else {
 					console.log('Connection established to database');
 					
-					if (urlCollection.find({"original_url" : urlLong}).toArray().length > 0) {
+					if (urlCollection.count({original_url : urlLong}) > 0) {
 						// return the document already in the database
 						console.log('Document already exists within database');
-						res.send(urlCollection.find({"original_url": urlLong}));
+						res.send(urlCollection.find({original_url: urlLong}));
+						db.close();
 					} else {
 						var urlGenerated = generateShort();
-						urlCollection.insert({original_url: urlLong, short_url: urlGenerated});
-						res.send('{"original_url": ' + urlLong + '"short_url:" ' + urlGenerated +'}');						
+						urlCollection.insertOne({original_url: urlLong, short_url: urlGenerated}, function () {
+							console.log('Document successfully inserted.');
+							res.send('{"original_url": ' + urlLong + '"short_url:" ' + urlGenerated +'}');
+							db.close();
+						});
+						// res.send('{"original_url": ' + urlLong + '"short_url:" ' + urlGenerated +'}');						
 					}
 				} 
-				db.close();
+				// db.close();
 
 
 				function generateShort () {
@@ -59,7 +65,7 @@ app.get('/new/:url(*)?', function(req, res) {
 
 					var shortUrl = 'http://localhost:3000/' + shortParam;
 							
-					if (urlCollection.find({"short_url": shortUrl}).toArray().length > 0) {
+					if (urlCollection.count({short_url: shortUrl}) > 0) {
 						console.log('shortUrl already exists within database. Generating another...');				
 						generateShort();
 					} else {	
