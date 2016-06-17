@@ -15,7 +15,7 @@ app.get('/new/:url(*)?', function(req, res) {
 	// if url is undef, serve index.html [DONE]
 	// if not, check if it's a valid address using regex [DONE]
 	// if it is, check if it already exists in database [DONE]
-	// if it doesn't, log it and return []	
+	// if it doesn't, log it and return [DONE]	
 	
 	// store passed url in urlLong
 	var urlLong = req.params.url;
@@ -25,33 +25,36 @@ app.get('/new/:url(*)?', function(req, res) {
 	} else {
 		var urlMongo = 'mongodb://localhost:27017/urls';		
 		var urlRegex = /https?:\/\/www\.\w+\.\w+/;
+		var mongoQuery = { original_url : urlLong };
 
 		if(urlRegex.test(urlLong)) {
 			
-			mongoClient.connect(urlMongo, function(err, db) {
+			mongoClient.connect(urlMongo, function (err, db) {
 				var urlCollection = db.collection('urls');
 				if (err) {
 					console.log('Unable to connect to database', err);
 					db.close();
 				} else {
 					console.log('Connection established to database');
-					
-					if (urlCollection.count({original_url : urlLong}) > 0) {
-						// return the document already in the database
-						console.log('Document already exists within database');
-						res.send(urlCollection.find({original_url: urlLong}));
-						db.close();
-					} else {
-						var urlGenerated = generateShort();
-						urlCollection.insertOne({original_url: urlLong, short_url: urlGenerated}, function () {
-							console.log('Document successfully inserted.');
-							res.send('{"original_url": ' + urlLong + '"short_url:" ' + urlGenerated +'}');
+					urlCollection.findOne(mongoQuery, function (err, document) {
+						if (err) {
+							console.log('findOne error occurred.');
 							db.close();
-						});
-						// res.send('{"original_url": ' + urlLong + '"short_url:" ' + urlGenerated +'}');						
-					}
+						} else {
+							if (document) {
+								// return the document already in the database
+								console.log('Document already exists within database.');
+								res.send(document);
+								db.close();
+							} else {
+								// generate a new document and return it
+								generateShort();																			
+							}
+						}
+
+					}); // end findOne
 				} 
-				// db.close();
+				
 
 
 				function generateShort () {
@@ -62,20 +65,43 @@ app.get('/new/:url(*)?', function(req, res) {
 					for (var i = 0; i < 5; i++) {
 						shortParam += alphaNumeric[getRandomIntInclusive(0, alphaNumeric.length-1)];
 					}
-
-					var shortUrl = 'http://localhost:3000/' + shortParam;
-							
-					if (urlCollection.count({short_url: shortUrl}) > 0) {
-						console.log('shortUrl already exists within database. Generating another...');				
-						generateShort();
-					} else {	
-						console.log('Unique shortUrl successfully generated.');				
-						return shortUrl;
-					}	
+					var urlShort = 'http://localhost:3000/' + shortParam;
+					var genQuery = { short_url: urlShort };
+					
+					urlCollection.findOne(genQuery, function (err, document) {
+						if (err) {
+							console.log('generateShort error occurred.');
+							db.close();
+						} else {
+							if (document) {
+								console.log('urlShort already exists within database. Generating another...');				
+								generateShort();
+							} else {
+								console.log('Unique urlShort successfully generated.');	
+										
+								var urlObj = { 
+									original_url: urlLong,
+									short_url: urlShort
+								};
+								
+								urlCollection.insertOne(urlObj, function (err, result) {
+									if (err) {
+										console.log('Insert error occurred.');
+									} else {
+										console.log('Document successfully inserted.');										
+										res.send(result.ops);
+									}	
+									db.close();									
+								});		
+							}
+						}
+					}); // end .findOne				
+				
 
 					function getRandomIntInclusive(min, max) {
 				    	return Math.floor(Math.random() * (max - min + 1)) + min;
 					}
+
 				} // end generateShort
 			}); // end db connection
 
