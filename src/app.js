@@ -6,6 +6,7 @@ var app = express();
 var mongodb = require('mongodb');
 // declare variables for database connection via mongo driver
 var mongoClient = mongodb.MongoClient;
+var urlMongo = 'mongodb://localhost:27017/urls';
 
 
 // app.get('/new/:url(*)?', function(req, res) {
@@ -110,16 +111,48 @@ var mongoClient = mongodb.MongoClient;
 
 
 app.get('/:address?', function(req, res) {
-	if (req.query.new) {
+	
+	if (req.params.address !== undefined) {
+		
+		var shortAddress = 'http://localhost:3000/' + req.params.address;
+		var addressQuery = { short_url: shortAddress };
+		
+		mongoClient.connect(urlMongo, function (err, db) {
+			var urlCollection = db.collection('urls');
+			if (err) {
+				console.log('Unable to connect to database: ', err);
+				db.close();
+			} else {
+				console.log('Connection established to database.');
+				urlCollection.findOne(addressQuery, function (err, document) {
+					if (err) {
+						console.log('An addressQuery error has occurred: ', err);
+						db.close();
+					} else {
+						if (document) {
+							console.log('Document found! Redirecting...');
+							var redirectLink = document;
+							console.log(redirectLink);
+							db.close();
+							res.redirect(redirectLink.original_url);							
+						} else {
+							console.log('That address does not exist within the database. Please generate it first.');
+							db.close();
+							res.sendFile(__dirname + '/index.html');
+						}
+					}
+				}); // end .findOne
+			}
+		}); // end db connection
+	} else if (req.query.new) {
 		// if url is undef, serve index.html
 		// if not undef, check if it's a valid address using regex -- return null json if not valid
 		// if it is valid, check if it already exists in database -- return valid document if it already exists
 		// if it doesn't exist, add it to db and return valid document
 		
 		// store passed url in urlLong
-		var urlLong = req.query.new;
-		
-		var urlMongo = 'mongodb://localhost:27017/urls';		
+		var urlLong = req.query.new;		
+				
 		var urlRegex = /https?:\/\/www\.\w+\.\w+/;
 		var mongoQuery = { original_url : urlLong };
 
@@ -148,9 +181,8 @@ app.get('/:address?', function(req, res) {
 							}
 						}
 
-					}); // end findOne
-				} 
-				
+					}); // end .findOne
+				} 				
 
 
 				function generateShort () {
