@@ -1,7 +1,9 @@
 'use strict';
 // IN FUTURE PROJECTS, UTILISE CONNECTION POOLING
 var express = require('express');
+var path = require('path');
 var app = express();
+app.use(express.static(path.join(__dirname, 'public')));
 
 var mongodb = require('mongodb');
 // declare variables for database connection via mongo driver
@@ -36,7 +38,7 @@ app.get('/:address?', function(req, res) {
 						} else {
 							console.log('That address does not exist within the database. Please generate it first.');
 							db.close();
-							res.sendFile(__dirname + '/index.html');
+							res.sendFile(__dirname + '/public/index.html');
 						}
 					}
 				}); // end .findOne
@@ -137,7 +139,7 @@ app.get('/:address?', function(req, res) {
 		}		
 			
 	} else {
-		res.sendFile(__dirname + '/index.html');
+		res.sendFile(__dirname + '/public/index.html');
 	}
 	
 	
