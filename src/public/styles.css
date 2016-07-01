@@ -1,3 +1,13 @@
-h1 {
-	color: red;
+body {
+	font-family: arial;
+}
+
+div {
+	width: 90%;
+	max-width: 500px;
+	margin: 75px auto 0;
+}
+
+.example {
+	color: #FF4357;
 }
