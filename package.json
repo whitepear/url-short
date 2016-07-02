@@ -24,5 +24,8 @@
   "dependencies": {
     "express": "^4.13.4",
     "mongodb": "^2.1.18"
+  },
+  "engines": {
+    "node": "v4.4.2"
   }
 }

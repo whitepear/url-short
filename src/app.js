@@ -8,7 +8,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 var mongodb = require('mongodb');
 // declare variables for database connection via mongo driver
 var mongoClient = mongodb.MongoClient;
-var urlMongo = 'mongodb://localhost:27017/urls';
+var urlMongo = process.env.MLAB_URLS_DB || 'mongodb://localhost:27017/urls';
 
 app.get('/:address?', function(req, res) {
 	
@@ -145,4 +145,4 @@ app.get('/:address?', function(req, res) {
 	
 }); // root get
 
-app.listen(3000, console.log('Server is running...'));
+app.listen(process.env.PORT || 3000, console.log('Server is running...'));
